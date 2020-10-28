@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -78,6 +79,12 @@ int main(void)
 	uint8_t buf[12];
 	int16_t val;
 	float temp_c;
+	uint16_t raw;
+	char msg[10];
+	bool watering = false;
+	const int minDrynessVal = 200;
+	const int maxDrynessVal = 700;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -144,8 +151,23 @@ int main(void)
 	     // Send out buffer (temperature or error message)
 	     HAL_UART_Transmit(&huart2, buf, strlen((char*)buf), HAL_MAX_DELAY);
 
-	     // Wait
-	     HAL_Delay(500);
+	     //Get ADC Value
+	     HAL_ADC_Start(&hadc1);
+	     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	     raw = HAL_ADC_GetValue(&hadc1);
+
+	     //Convert to string and print
+	     sprintf(msg, "%hu\r\n", raw);
+	     HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+
+	     if(!watering || raw < minDrynessVal) { //needs watering
+	    	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+	     }
+	     else if(watering || raw > maxDrynessVal) { //done watering
+	    	 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+	     }
+
+	     HAL_Delay(1000);
 
     /* USER CODE END WHILE */
 
